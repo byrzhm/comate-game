@@ -407,9 +407,9 @@ class Bird:
 
 class Pipe:
     def __init__(self):
-        self.gap = 180  # 减小水管空隙增加难度
+        self.gap = 200  # 增加水管空隙，使游戏更容易些
         self.width = 80
-        self.speed = 4  # 增加水管移动速度
+        self.speed = 4  # 水管移动速度
         self.color = GREEN
         self.passed = False
         
@@ -440,7 +440,8 @@ class Game:
         self.bird = Bird()
         self.pipes = []
         self.pipe_timer = 0
-        self.pipe_frequency = 1500  # 毫秒
+        self.pipe_frequency = 3500  # 毫秒，增大间隔，减少频率
+        self.initial_delay = 1000  # 开始游戏后延迟一段时间再生成第一个水管
         self.background = Background()
         self.base_speed = 4  # 基础速度
         self.difficulty_interval = 5  # 每5分增加难度
@@ -464,6 +465,7 @@ class Game:
                 if event.key == pygame.K_SPACE:
                     if self.state == "welcome":
                         self.state = "playing"
+                        self.pipe_timer = pygame.time.get_ticks()  # 重置管道计时器
                     elif self.state == "game_over":
                         current_camera_index = self.camera.current_camera_index
                         self.__init__(camera_index=current_camera_index)  # 重置游戏但保留相机索引
@@ -491,6 +493,7 @@ class Game:
                     if jump_triggered:
                         if self.state == "welcome":
                             self.state = "playing"
+                            self.pipe_timer = pygame.time.get_ticks()  # 重置管道计时器
                         elif self.state == "game_over":
                             current_camera_index = self.camera.current_camera_index
                             self.__init__(camera_index=current_camera_index)
@@ -508,7 +511,11 @@ class Game:
             
             # 生成新水管
             current_time = pygame.time.get_ticks()
-            if current_time - self.pipe_timer > self.pipe_frequency:
+            
+            # 开始游戏时添加初始延迟，让玩家有准备时间
+            if len(self.pipes) == 0 and current_time - self.pipe_timer < self.initial_delay:
+                pass  # 等待初始延迟
+            elif current_time - self.pipe_timer > self.pipe_frequency:
                 self.pipes.append(Pipe())
                 self.pipe_timer = current_time
             
@@ -527,11 +534,15 @@ class Game:
                     self.score += 1
                     score_sound.play()
                     
-                    # 根据分数增加难度
+                    # 根据分数增加难度，但管道间隔也相应增加
                     if self.score % self.difficulty_interval == 0:
                         self.base_speed += 0.5
                         for p in self.pipes:
                             p.speed = self.base_speed
+                        
+                        # 随着速度增加，适当增加水管间隔
+                        # 但最低不少于1800毫秒
+                        self.pipe_frequency = max(1800, 2500 - (self.score // self.difficulty_interval) * 100)
                 
                 # 移除超出屏幕的水管
                 if pipe.x + pipe.width < 0:
