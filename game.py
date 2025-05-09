@@ -89,7 +89,23 @@ class Background:
         self.bg_speed = 1
         self.ground_x = 0
         self.ground_speed = 3
-        self.ground_height = 50
+        self.ground_height = 100  # 根据地面图像调整高度
+        
+        # 加载背景和地面图像
+        try:
+            self.bg_img = pygame.image.load("assets/sprites/background-day.png").convert()
+            self.bg_img = pygame.transform.scale(self.bg_img, (GAME_WIDTH, SCREEN_HEIGHT))
+            
+            self.ground_img = pygame.image.load("assets/sprites/base.png").convert()
+            # 获取地面图像的实际高度
+            self.ground_height = self.ground_img.get_height()
+            # 缩放地面图像宽度与游戏区域匹配
+            self.ground_img = pygame.transform.scale(self.ground_img, (GAME_WIDTH, self.ground_height))
+        except Exception as e:
+            print(f"无法加载背景图像: {e}")
+            self.bg_img = None
+            self.ground_img = None
+            self.ground_height = 50  # 回退到默认高度
         
     def update(self):
         # 背景滚动
@@ -99,17 +115,25 @@ class Background:
         self.ground_x = (self.ground_x - self.ground_speed) % GAME_WIDTH
         
     def draw(self, screen):
-        # 绘制背景
-        screen.fill(SKY_BLUE)
+        if self.bg_img is not None:
+            # 绘制背景图像
+            screen.blit(self.bg_img, (self.bg_x, 0))
+            screen.blit(self.bg_img, (self.bg_x + GAME_WIDTH, 0))
+        else:
+            # 回退到纯色背景
+            screen.fill(SKY_BLUE)
         
-        # 绘制地面
-        pygame.draw.rect(screen, GROUND_COLOR, 
-                         (0, SCREEN_HEIGHT - self.ground_height, GAME_WIDTH, self.ground_height))
-        
-        # 绘制地面重复部分
-        pygame.draw.rect(screen, GROUND_COLOR, 
-                         (self.ground_x + GAME_WIDTH, SCREEN_HEIGHT - self.ground_height, 
-                          GAME_WIDTH, self.ground_height))
+        if self.ground_img is not None:
+            # 绘制地面图像
+            screen.blit(self.ground_img, (0, SCREEN_HEIGHT - self.ground_height))
+            screen.blit(self.ground_img, (self.ground_x + GAME_WIDTH, SCREEN_HEIGHT - self.ground_height))
+        else:
+            # 回退到矩形地面
+            pygame.draw.rect(screen, GROUND_COLOR, 
+                           (0, SCREEN_HEIGHT - self.ground_height, GAME_WIDTH, self.ground_height))
+            pygame.draw.rect(screen, GROUND_COLOR, 
+                           (self.ground_x + GAME_WIDTH, SCREEN_HEIGHT - self.ground_height, 
+                            GAME_WIDTH, self.ground_height))
 
 class Camera:
     def __init__(self):
@@ -356,12 +380,22 @@ class Bird:
     def __init__(self):
         self.x = 200
         self.y = SCREEN_HEIGHT // 2
+        # 加载小鸟图像
+        try:
+            self.image = pygame.image.load("assets/sprites/redbird-midflap.png").convert_alpha()
+            # 缩放图像到合适大小
+            self.image = pygame.transform.scale(self.image, (40, 30))
+        except Exception as e:
+            print(f"无法加载小鸟图像: {e}")
+            # 回退到矩形绘制
+            self.image = None
+            self.color = (255, 255, 0)  # 黄色小鸟
+            
         self.width = 40
         self.height = 30
         self.velocity = 0
         self.gravity = 0.8
         self.jump_strength = -12
-        self.color = (255, 255, 0)  # 黄色小鸟
         self.angle = 0  # 旋转角度
         self.max_angle = 30  # 最大旋转角度
         self.min_angle = -90  # 最小旋转角度
@@ -389,29 +423,41 @@ class Bird:
             self.velocity = 0
             
     def draw(self, screen):
-        # 创建小鸟表面
-        bird_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        pygame.draw.rect(bird_surface, self.color, (0, 0, self.width, self.height))
-        
-        # 旋转表面
-        rotated_surface = pygame.transform.rotate(bird_surface, self.angle)
-        rotated_rect = rotated_surface.get_rect(center=(self.x + self.width//2, self.y + self.height//2))
-        
-        # 绘制旋转后的小鸟
-        screen.blit(rotated_surface, rotated_rect)
+        if self.image is not None:
+            # 旋转图像
+            rotated_image = pygame.transform.rotate(self.image, self.angle)
+            rotated_rect = rotated_image.get_rect(center=(self.x + self.width//2, self.y + self.height//2))
+            screen.blit(rotated_image, rotated_rect)
+        else:
+            # 回退到矩形绘制
+            bird_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            pygame.draw.rect(bird_surface, self.color, (0, 0, self.width, self.height))
+            rotated_surface = pygame.transform.rotate(bird_surface, self.angle)
+            rotated_rect = rotated_surface.get_rect(center=(self.x + self.width//2, self.y + self.height//2))
+            screen.blit(rotated_surface, rotated_rect)
         
     def get_mask(self):
-        # 创建更精确的碰撞检测
-        return pygame.Rect(self.x + self.width//4, self.y + self.height//4, 
-                          self.width//2, self.height//2)
+        # 使用图像边界作为碰撞检测
+        return pygame.Rect(self.x, self.y, self.width, self.height)
 
 class Pipe:
     def __init__(self):
         self.gap = 300  # 增加水管空隙，使游戏更容易些
         self.width = 80
         self.speed = 4  # 水管移动速度
-        self.color = GREEN
         self.passed = False
+        
+        # 加载水管图像
+        try:
+            self.pipe_img = pygame.image.load("assets/sprites/pipe-green.png").convert_alpha()
+            self.pipe_img = pygame.transform.scale(self.pipe_img, (self.width, SCREEN_HEIGHT))
+            # 创建上方水管的镜像
+            self.top_pipe_img = pygame.transform.flip(self.pipe_img, False, True)
+        except Exception as e:
+            print(f"无法加载水管图像: {e}")
+            self.pipe_img = None
+            self.top_pipe_img = None
+            self.color = GREEN  # 回退到矩形绘制
         
         # 随机生成水管位置
         self.top_height = random.randint(50, SCREEN_HEIGHT - self.gap - 50)
@@ -427,8 +473,18 @@ class Pipe:
         self.bottom_rect.x = self.x
         
     def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.top_rect)
-        pygame.draw.rect(screen, self.color, self.bottom_rect)
+        if self.pipe_img is not None and self.top_pipe_img is not None:
+            # 绘制上方水管(镜像)
+            top_pipe = pygame.transform.scale(self.top_pipe_img, (self.width, self.top_height))
+            screen.blit(top_pipe, (self.x, 0))
+            
+            # 绘制下方水管
+            bottom_pipe = pygame.transform.scale(self.pipe_img, (self.width, self.bottom_height))
+            screen.blit(bottom_pipe, (self.x, SCREEN_HEIGHT - self.bottom_height))
+        else:
+            # 回退到矩形绘制
+            pygame.draw.rect(screen, self.color, self.top_rect)
+            pygame.draw.rect(screen, self.color, self.bottom_rect)
         
     def collide(self, bird_rect):
         return bird_rect.colliderect(self.top_rect) or bird_rect.colliderect(self.bottom_rect)
