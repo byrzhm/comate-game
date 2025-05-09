@@ -407,7 +407,7 @@ class Bird:
 
 class Pipe:
     def __init__(self):
-        self.gap = 200  # 增加水管空隙，使游戏更容易些
+        self.gap = 300  # 增加水管空隙，使游戏更容易些
         self.width = 80
         self.speed = 4  # 水管移动速度
         self.color = GREEN
@@ -440,7 +440,7 @@ class Game:
         self.bird = Bird()
         self.pipes = []
         self.pipe_timer = 0
-        self.pipe_frequency = 3500  # 毫秒，增大间隔，减少频率
+        self.pipe_frequency = 6000  # 毫秒，增大间隔，减少频率
         self.initial_delay = 1000  # 开始游戏后延迟一段时间再生成第一个水管
         self.background = Background()
         self.base_speed = 4  # 基础速度
@@ -556,12 +556,53 @@ class Game:
         # 绘制背景和地面
         self.background.draw(screen)
         
-        # 绘制游戏区域边界
-        pygame.draw.rect(screen, BLACK, (0, 0, GAME_WIDTH, SCREEN_HEIGHT), 2)
-        pygame.draw.rect(screen, BLACK, (GAME_WIDTH, 0, SCREEN_WIDTH-GAME_WIDTH, SCREEN_HEIGHT), 2)
+        # 根据游戏状态绘制游戏元素（小鸟和水管），确保它们在相机区域显示之前绘制
+        if self.state == "playing":
+            # 绘制小鸟
+            self.bird.draw(screen)
+            
+            # 绘制水管
+            for pipe in self.pipes:
+                pipe.draw(screen)
+            
+            # 绘制分数
+            font = get_font(36)
+            score_text = font.render(f"分数: {self.score}", True, BLACK)
+            screen.blit(score_text, (20, 20))
+            
+        elif self.state == "game_over":
+            font = get_font(64)
+            text = font.render("游戏结束", True, BLACK)
+            screen.blit(text, (GAME_WIDTH//2 - text.get_width()//2, SCREEN_HEIGHT//2 - text.get_height()//2))
+            
+            if self.use_gesture_control:
+                restart_text = font.render("挥手重新开始", True, BLACK)
+            else:
+                restart_text = font.render("按空格键重新开始", True, BLACK)
+            screen.blit(restart_text, (GAME_WIDTH//2 - restart_text.get_width()//2, SCREEN_HEIGHT//2 + 50))
+            
+        elif self.state == "welcome":
+            font_large = get_font(72)
+            font_small = get_font(36)
+            
+            title = font_large.render("Flappy Bird", True, BLACK)
+            if self.use_gesture_control:
+                instruction1 = font_small.render("挥手开始游戏", True, BLACK)
+                instruction2 = font_small.render("手势控制小鸟跳跃", True, BLACK)
+            else:
+                instruction1 = font_small.render("按空格键开始游戏", True, BLACK)
+                instruction2 = font_small.render("空格键控制小鸟跳跃", True, BLACK)
+            
+            screen.blit(title, (GAME_WIDTH//2 - title.get_width()//2, SCREEN_HEIGHT//3))
+            screen.blit(instruction1, (GAME_WIDTH//2 - instruction1.get_width()//2, SCREEN_HEIGHT//2))
+            screen.blit(instruction2, (GAME_WIDTH//2 - instruction2.get_width()//2, SCREEN_HEIGHT//2 + 50))
         
-        # 绘制相机预览区域背景
+        # 游戏元素绘制完成后，绘制游戏区域边界
+        pygame.draw.rect(screen, BLACK, (0, 0, GAME_WIDTH, SCREEN_HEIGHT), 2)
+        
+        # 绘制相机区域背景与边界
         pygame.draw.rect(screen, BLACK, (GAME_WIDTH, 0, CAMERA_WIDTH, SCREEN_HEIGHT))
+        pygame.draw.rect(screen, BLACK, (GAME_WIDTH, 0, SCREEN_WIDTH-GAME_WIDTH, SCREEN_HEIGHT), 2)
         
         # 如果有相机画面，显示在右侧
         if self.camera_surface:
@@ -586,31 +627,6 @@ class Game:
             screen.blit(instruction, (GAME_WIDTH + 10, SCREEN_HEIGHT - 90))
             screen.blit(sensitivity_info, (GAME_WIDTH + 10, SCREEN_HEIGHT - 60))
             screen.blit(camera_info, (GAME_WIDTH + 10, SCREEN_HEIGHT - 30))
-        
-        # 根据游戏状态绘制不同界面
-        if self.state == "welcome":
-            font_large = get_font(72)
-            font_small = get_font(36)
-            
-            title = font_large.render("Flappy Bird", True, BLACK)
-            if self.use_gesture_control:
-                instruction1 = font_small.render("挥手开始游戏", True, BLACK)
-                instruction2 = font_small.render("手势控制小鸟跳跃", True, BLACK)
-            else:
-                instruction1 = font_small.render("按空格键开始游戏", True, BLACK)
-                instruction2 = font_small.render("空格键控制小鸟跳跃", True, BLACK)
-            
-            screen.blit(title, (GAME_WIDTH//2 - title.get_width()//2, SCREEN_HEIGHT//3))
-            screen.blit(instruction1, (GAME_WIDTH//2 - instruction1.get_width()//2, SCREEN_HEIGHT//2))
-            screen.blit(instruction2, (GAME_WIDTH//2 - instruction2.get_width()//2, SCREEN_HEIGHT//2 + 50))
-        
-        elif self.state == "playing":
-            # 绘制小鸟
-            self.bird.draw(screen)
-            
-            # 绘制水管
-            for pipe in self.pipes:
-                pipe.draw(screen)
             
             # 绘制分数
             font = get_font(36)
