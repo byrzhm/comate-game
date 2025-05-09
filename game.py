@@ -609,6 +609,9 @@ class Game:
                 self.state = "game_over"
     
     def draw(self):
+        # 清空屏幕
+        screen.fill(BLACK)
+        
         # 绘制背景和地面
         self.background.draw(screen)
         
