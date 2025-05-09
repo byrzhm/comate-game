@@ -108,7 +108,7 @@ class Background:
             self.ground_height = 50  # 回退到默认高度
         
     def update(self):
-        # 背景滚动
+        # 背景滚动 - 确保只在游戏区域内循环，防止出现黑边
         self.bg_x = (self.bg_x - self.bg_speed) % GAME_WIDTH
         
         # 地面滚动
@@ -116,16 +116,26 @@ class Background:
         
     def draw(self, screen):
         if self.bg_img is not None:
-            # 绘制背景图像
+            # 修复绘制背景图像的方法，确保覆盖整个游戏区域
+            # 先绘制第一张背景图
             screen.blit(self.bg_img, (self.bg_x, 0))
+            # 填充可能出现的空隙，确保无缝滚动
+            if self.bg_x > 0:
+                screen.blit(self.bg_img, (self.bg_x - GAME_WIDTH, 0))
+            # 绘制第二张背景图
             screen.blit(self.bg_img, (self.bg_x + GAME_WIDTH, 0))
         else:
             # 回退到纯色背景
-            screen.fill(SKY_BLUE)
+            screen.fill(SKY_BLUE, rect=(0, 0, GAME_WIDTH, SCREEN_HEIGHT))
         
         if self.ground_img is not None:
-            # 绘制地面图像
-            screen.blit(self.ground_img, (0, SCREEN_HEIGHT - self.ground_height))
+            # 修复绘制地面图像的方法，确保覆盖整个游戏区域底部
+            # 先绘制第一张地面图
+            screen.blit(self.ground_img, (self.ground_x, SCREEN_HEIGHT - self.ground_height))
+            # 填充可能出现的空隙，确保无缝滚动
+            if self.ground_x > 0:
+                screen.blit(self.ground_img, (self.ground_x - GAME_WIDTH, SCREEN_HEIGHT - self.ground_height))
+            # 绘制第二张地面图
             screen.blit(self.ground_img, (self.ground_x + GAME_WIDTH, SCREEN_HEIGHT - self.ground_height))
         else:
             # 回退到矩形地面
